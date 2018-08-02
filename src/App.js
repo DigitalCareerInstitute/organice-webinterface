@@ -18,7 +18,7 @@ class App extends Component {
   }
   onSubmit = (event) => {
     event.preventDefault();
-    fetch('http://organize.tmy.io/api/login', {
+    fetch('http://organice.tmy.io:8080/api/login', {
       method: 'POST',
       body: JSON.stringify({
         email: this.state.form.email.toLowerCase(),

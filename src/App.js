@@ -2,6 +2,9 @@ import React, { Component } from 'react';
 import logo from './logo.svg';
 import './App.css';
 
+const domain = process.env.REACT_APP_DOMAIN || "http://localhost";
+const port = process.env.REACT_APP_BACKENDPORT || 4000;
+
 class App extends Component {
   state = {
     auth: false,
@@ -18,7 +21,7 @@ class App extends Component {
   }
   onSubmit = (event) => {
     event.preventDefault();
-    fetch('http://organice.tmy.io:8080/api/login', {
+    fetch(`http://${domain}:${port}/api/login`, {
       method: 'POST',
       body: JSON.stringify({
         email: this.state.form.email.toLowerCase(),

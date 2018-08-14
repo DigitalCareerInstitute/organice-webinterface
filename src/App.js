@@ -1,23 +1,41 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
-import './App.css';
+import Login from './Login.jsx'
+import Scans from './Scans.jsx'
+import {
+  BrowserRouter as Router,
+  Route,
+  Redirect,
+} from 'react-router-dom'
 
 const domain = process.env.REACT_APP_DOMAIN || "http://localhost";
 const port = process.env.REACT_APP_BACKENDPORT || 4000;
-
 class App extends Component {
   state = {
-    auth: false,
+    user: false,
     alert: false,
     form: {
-      email: "",
-      password: ""
+      email: "tommy@example.com",
+      password: "password123"
+    }
+  }
+  componentWillMount = () => {
+    const user = localStorage.getItem("user")
+    if (user) {
+      console.log(user)
+      this.setState({ user: { name: JSON.parse(localStorage.getItem("user")).name, token: JSON.parse(localStorage.getItem("user")).token } })
     }
   }
   onChange = (event) => {
-    let form = {...this.state.form}
+    let form = { ...this.state.form }
     form[event.target.id] = event.target.value
-    this.setState({form})
+    this.setState({ form })
+  }
+  logout = () => {
+    console.log('loggedout');
+
+    localStorage.removeItem("user")
+    this.setState({ user: null })
+    window.history.pushState(null, null, '/')
   }
   onSubmit = (event) => {
     event.preventDefault();
@@ -30,77 +48,51 @@ class App extends Component {
     })
       .then(res => res.json())
       .then(data => {
-        if(data.user.token){
-          let shortToken = data.user.token.substring(0, data.user.token.length - 170)
-          this.setState({auth: true, alert: {"success": `Yay - welcome ${data.user.name}, your token is${shortToken} ...`}})
-        } else if (data.code === 401){
-          this.setState({auth: false, alert: {"error": data.message}})
+        console.log('data', data);
+
+        if (data.user.token) {
+          localStorage.setItem("user", JSON.stringify({ name: data.user.name, token: data.user.token }))
+          this.setState({ user: { name: data.user.name, token: data.user.token } }, () => {
+            window.history.pushState(null, null, '/scans')
+          })
+
+
+        } else if (data.code === 401) {
+          this.setState({ user: false, alert: { "error": data.message } })
         }
-        localStorage.setItem("token", data.user.token)
       })
       .catch(err => {
         console.log(err)
       })
-    }
+  }
   render() {
-    var loginButton = "";
-    if (this.state.alert.error) {
-      alert = <div className="alert alert-danger fixed-bottom text-center mb-0">{this.state.alert.error} </div>;
-    } else if(this.state.alert.success) {
-      alert = <div className="alert alert-success fixed-bottom text-center mb-0">{this.state.alert.success} </div>;
-    }
 
-    setTimeout(
-      function () {
-        this.setState({ alert: false });
-      }
-        .bind(this),
-      3000
-    );
-
-    if (this.state.auth) {
-      loginButton = <a class="nav-link active" href="#">Logged in</a>;
-    } else {
-      loginButton = <a class="nav-link disabled" href="#">Logged out</a>;
-    }
     return (
-      <div className="h-100">
-      {alert}
-        <nav class="navbar navbar-expand-lg fixed-top navbar-light bg-light">
-          <a class="navbar-brand" href="#">Navbar</a>
-          <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-          </button>
-          <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav">
-              
-              <li class="nav-item">
-                {loginButton} 
-              </li>
-            </ul>
-          </div>
-        </nav>
-        <div className="App">
-
-          <form onSubmit={this.onSubmit} className="form-signin">
-            <img src={logo} className="App-logo" alt="logo" />
-            <h1 className="h3 my-5 font-weight-normal">Welcome to OrgaNice</h1>
-            <label htmlFor="email" className="sr-only">Email address</label>
-            <input onChange={this.onChange} type="email" id="email" className="form-control" placeholder="Email address" required autoFocus/>
-            <label htmlFor="password" className="sr-only">Password</label>
-            <input onChange={this.onChange} type="password" id="password" className="form-control" placeholder="Password" required/>
-            <div className="checkbox mb-3">
-              <label>
-                <input type="checkbox" value="remember-me"/> Remember me
-              </label>
-            </div>
-            <button className="btn btn-lg btn-primary btn-block">Sign in</button>
-            <p className="mt-5 mb-3 text-muted">&copy; 2017-2018</p>
-          </form>
+      <Router>
+        <div className='h-100'>
+          <Route exact path="/" render={() => (
+            this.state.user ? (
+              <Redirect to={{ pathname: '/scans' }} />
+            ) : (
+                <Login
+                  onChange={this.onChange}
+                  onSubmit={this.onSubmit}
+                  alert={this.state.alert}
+                  user={this.state.user} />
+              )
+          )} />
+          <Route exact path="/scans" render={() => (
+            this.state.user ? (
+              <div>
+                <Scans logout={this.logout} user={this.state.user} />
+              </div>
+            ) : (
+                <Redirect to={{ pathname: '/' }} />
+              )
+          )} />
         </div>
-      </div>
-    );
+      </Router>
+    )
   }
 }
-
 export default App;
